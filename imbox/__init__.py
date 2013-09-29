@@ -30,7 +30,11 @@ class Imbox(object):
     def query_uids(self, **kwargs):
         query = build_search_query(**kwargs)
 
-        message, data = self.connection.uid('search', None, query)
+        try:
+            message, data = self.connection.uid('search', None, query)
+        except imaplib.error as e:
+            print query, data
+            print "imaplib.error({0}): {1}".format(e.errno, e.strerror)
         return data[0].split()
 
     def fetch_by_uid(self, uid):
