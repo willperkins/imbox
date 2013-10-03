@@ -1,7 +1,9 @@
 from imbox.imap import ImapTransport
+from imbox.parser import parse_folders
 from imbox.parser import parse_email
 from imbox.query import build_search_query
 import re, imaplib
+from imbox.parser import encode_utf7
 
 class Imbox(object):
 
@@ -12,33 +14,33 @@ class Imbox(object):
         self.username = username
         self.password = password
 
+
     def __enter__(self):
         self.connection()
 
     def __exit__(self, type, value, traceback):
         self.logout()
 
-    def connect(self):
-        username = self.username
-        password = self.password
-        self.connection = self.connection
-
-
     def logout(self):
         self.connection.logout()
 
+    def select_folder(self, name, **kwargs):
+        folder = encode_utf7(name)
+        read_only = kwargs.get('readonly', True)
+        print folder, read_only
+        self.connection.select(folder, readonly=read_only)
+
     def query_uids(self, **kwargs):
         query = build_search_query(**kwargs)
-   
-        data = None
-        try:
-            message, data = self.connection.uid('search', None, query)
-        except imaplib.IMAP4.abort:
-            self.connection = self.server.connect(self.username, self.password)
-            message, data = self.connection.uid('search', None, query)
+
+        message, data = self.connection.uid('search', None, query)
         return data[0].split()
 
-    def fetch_by_uid(self, uid):
+    def fetch_by_uid(self, uid, **kwargs):
+        folder = kwargs.get('folder', None)
+        if folder:
+            self.select_folder(folder)
+
         message, data = self.connection.uid('fetch', uid, '(X-GM-MSGID X-GM-THRID UID FLAGS BODY.PEEK[])') # Don't mark the messages as read, save bandwidth with PEEK
         raw_email = data[0][1]
 
@@ -56,6 +58,7 @@ class Imbox(object):
         return email_object
 
     def fetch_list(self, **kwargs):
+        print kwargs
         uid_list = self.query_uids(**kwargs)
 
         for uid in uid_list:
@@ -80,6 +83,18 @@ class Imbox(object):
         read_only = kwargs.get('readonly', True)
         
         if folder:
-            self.connection.select(folder, readonly=read_only)
+            self.select_folder(folder, readonly=read_only)
 
         return self.fetch_list(**kwargs)
+
+    @property
+    def folders(self):
+        response = self.connection.list()
+        status, folders = response[0], response[1]
+        folders = parse_folders(folders)
+        folder_list = []
+        for box in folders:
+            if( box != '"[Gmail]"'):  #ignore global [Gmail] mailbox
+                 folder_list.append(box)
+        print folder_list
+        return folder_list

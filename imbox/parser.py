@@ -3,7 +3,8 @@ import StringIO
 import email
 import base64, quopri
 from email.header import Header, decode_header
-
+from .imap_utf7 import decode as decode_utf7
+from .imap_utf7 import encode as encode_utf7
 
 class Struct(object):
     def __init__(self, **entries):
@@ -175,3 +176,14 @@ def parse_email(raw_email):
                 'Value': value})
 
     return Struct(**parsed_email)
+
+list_response_pattern = re.compile(r'\((?P<flags>.*?)\) "(?P<delimiter>.*)" (?P<name>.*)')
+
+def parse_list_response(line):
+    flags, delimiter, mailbox_name = list_response_pattern.match(line).groups()
+    return (flags, delimiter, mailbox_name)
+
+def parse_folders(folders):
+    metadata = map(parse_list_response, folders)
+    folders = map(decode_utf7, [f[2] for f in metadata])
+    return folders
