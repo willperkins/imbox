@@ -34,7 +34,7 @@ class Imbox(object):
         try:
             message, data = self.connection.uid('search', None, query)
         except imaplib.IMAP4.abort:
-            self.server.connect(self.username, self.password)
+            self.connection = self.server.connect(self.username, self.password)
             message, data = self.connection.uid('search', None, query)
         return data[0].split()
 
