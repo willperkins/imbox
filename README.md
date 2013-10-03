@@ -51,7 +51,7 @@ messages_from = imbox.messages(date__gt='30-July-2013')
 messages_folder = imbox.messages(folder='Social')
 
 # Get messages in read-only mode
-messages_folder = inbox.messages(folder='Social, readonly=True)
+messages_folder = inbox.messages(folder='Social', readonly=True)
 
 # Get all messages in all folders
 from imbox import Imbox
