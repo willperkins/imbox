@@ -30,12 +30,9 @@ class Imbox(object):
     def query_uids(self, **kwargs):
         query = build_search_query(**kwargs)
 
-        try:
+        if query != None:
             message, data = self.connection.uid('search', None, query)
-        except imaplib.error as e:
-            print query, data
-            print "imaplib.error({0}): {1}".format(e.errno, e.strerror)
-        return data[0].split()
+            return data[0].split()
 
     def fetch_by_uid(self, uid):
         message, data = self.connection.uid('fetch', uid, '(X-GM-MSGID X-GM-THRID UID FLAGS BODY.PEEK[])') # Don't mark the messages as read, save bandwidth with PEEK
