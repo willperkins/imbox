@@ -1,7 +1,7 @@
 from imbox.imap import ImapTransport
 from imbox.parser import parse_email
 from imbox.query import build_search_query
-import re
+import re, imaplib
 
 class Imbox(object):
 
