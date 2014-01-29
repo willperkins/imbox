@@ -19,6 +19,7 @@ class Imbox(object):
         self.gmail = gmail
         self.zimbra = zimbra
 
+
     def __enter__(self):
         self.connection()
 
@@ -101,6 +102,7 @@ class Imbox(object):
         return email_object
 
     def fetch_list(self, **kwargs):
+        print kwargs
         uid_list = self.query_uids(**kwargs)
 
         for uid in uid_list:
