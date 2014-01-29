@@ -3,7 +3,8 @@ import StringIO
 import email
 import base64, quopri
 from email.header import Header, decode_header
-
+from .imap_utf7 import decode as decode_utf7
+from .imap_utf7 import encode as encode_utf7
 
 class Struct(object):
     def __init__(self, **entries):
@@ -51,21 +52,24 @@ def get_mail_addresses(message, header_name):
 
 
 def decode_param(param):
-	name, v = param.split('=', 1)
-	values = v.split('\n')
-	value_results = []
-	for value in values:
-		match = re.search(r'=\?(\w+)\?(Q|B)\?(.+)\?=', value)
-		if match:
-			encoding, type_, code = match.groups()
-			if type_ == 'Q':
-				value = quopri.decodestring(code)
-			elif type_ == 'B':
-				value = base64.decodestring(code)
-			value = unicode(value, encoding)
-			value_results.append(value)
-	if value_results: v = ''.join(value_results)
-	return name, v 
+    if param:
+	    name, v = param.split('=', 1)
+	    values = v.split('\n')
+	    value_results = []
+	    for value in values:
+		    match = re.search(r'=\?(\w+)\?(Q|B)\?(.+)\?=', value)
+		    if match:
+			    encoding, type_, code = match.groups()
+			    if type_ == 'Q':
+				    value = quopri.decodestring(code)
+			    elif type_ == 'B':
+				    value = base64.decodestring(code)
+			    value = unicode(value, encoding)
+			    value_results.append(value)
+	    if value_results: v = ''.join(value_results)
+	    return name, v
+    else:
+        return None 
 
 
 
@@ -73,8 +77,8 @@ def parse_attachment(message_part):
     content_disposition = message_part.get("Content-Disposition", None) # Check again if this is a valid attachment
     if content_disposition != None:
         dispositions = content_disposition.strip().split(";")
-        
-        if dispositions[0].lower() == "attachment":
+       
+        if dispositions[0].lower() in ["attachment", "inline"]: 
             file_data = message_part.get_payload(decode=True)
 
             attachment = {
@@ -85,15 +89,17 @@ def parse_attachment(message_part):
 
             
             for param in dispositions[1:]:
-                name, value = decode_param(param)
+                if param:
+                    name, value = decode_param(param)
 
-                if 'file' in  name:
-                    attachment['filename'] = value
+
+                    if 'file' in  name:
+                        attachment['filename'] = value
                 
-                if 'create-date' in name:
-                    attachment['create-date'] = value
+                    if 'create-date' in name:
+                        attachment['create-date'] = value
             
-            return attachment
+                return attachment
 
     return None 
 
@@ -175,3 +181,14 @@ def parse_email(raw_email):
                 'Value': value})
 
     return Struct(**parsed_email)
+
+list_response_pattern = re.compile(r'\((?P<flags>.*?)\) "(?P<delimiter>.*)" (?P<name>.*)')
+
+def parse_list_response(line):
+    flags, delimiter, mailbox_name = list_response_pattern.match(line).groups()
+    return (flags, delimiter, mailbox_name)
+
+def parse_folders(folders):
+    metadata = map(parse_list_response, folders)
+    folders = map(decode_utf7, [f[2] for f in metadata])
+    return folders
