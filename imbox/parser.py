@@ -153,7 +153,7 @@ def parse_email(raw_email):
             i = 'undisclosed@recipients.com'
     parsed_email['cc'] = email_message.get_all('cc')
 
-    value_headers_keys = ['Subject', 'Date','Message-ID']
+    value_headers_keys = ['Subject', 'Date','Message-ID', 'Message-Id', 'message-id']
     key_value_header_keys = ['Received-SPF', 
                             'MIME-Version',
                             'X-Spam-Status',
